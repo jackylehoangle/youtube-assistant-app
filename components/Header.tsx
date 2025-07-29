@@ -15,7 +15,7 @@ const Header: React.FC<HeaderProps> = ({ onReset }) => {
                     </svg>
                 </div>
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-100">
-                    Trợ lý Sản xuất YouTube
+                    Trợ lý YouTube
                 </h1>
             </div>
             <button
