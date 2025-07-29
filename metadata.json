@@ -1,0 +1,8 @@
+{
+  "name": "Trợ lý Sản xuất YouTube",
+  "description": "Một trợ lý được hỗ trợ bởi AI để hướng dẫn bạn trong toàn bộ quy trình tạo video YouTube, từ lên ý tưởng, viết kịch bản đến tạo gợi ý hình ảnh và hướng dẫn lồng tiếng.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "prompt": ""
+}
