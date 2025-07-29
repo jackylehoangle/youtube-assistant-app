@@ -347,7 +347,7 @@ export const generatePublishingKit = async (idea: VideoIdea, script: string): Pr
 export async function generateVbeeAudio(text: string, voice: string): Promise<string> {
   try {
     // Gọi đến API /api/vbee của chính bạn
-    const response = await fetch('/api/vbee', { 
+    const response = await fetch('/api/vbee.cjs', { 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
