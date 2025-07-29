@@ -26,7 +26,7 @@ export default async function handler(req, res) {
 
     // Call VBee
     const vbeeResponse = await axios.post(
-      'https://app.vbee.vn/api/v1/convert-text',
+  'https://vbee.vn/api/v1/tts',
       {
         input_text: text,
         voice_code: voice,
