@@ -1,24 +1,18 @@
-// File: api/vbee.js
-const axios = require('axios');
+import axios from 'axios';
 
-// Đây là function sẽ được Vercel chạy trên server
-module.exports = async (req, res) => {
-  // Chỉ cho phép phương thức POST
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
   try {
-    // Lấy dữ liệu (văn bản và giọng đọc) gửi từ frontend
     const { text, voice } = req.body;
 
     if (!text || !voice) {
       return res.status(400).json({ error: 'Missing text or voice in request body' });
     }
 
-    // Lấy API keys từ Biến Môi trường (sẽ cấu hình trên Vercel sau)
-    // Cách này giúp bảo mật, không lộ key trong mã nguồn
     const APP_ID = process.env.VBEE_APP_ID;
     const API_KEY = process.env.VBEE_API_KEY;
 
@@ -27,7 +21,6 @@ module.exports = async (req, res) => {
         return res.status(500).json({ error: 'API credentials not configured on server' });
     }
 
-    // Gọi đến API của VBee
     const vbeeResponse = await axios.post(
       'https://app.vbee.vn/api/v1/convert-text',
       {
@@ -46,7 +39,6 @@ module.exports = async (req, res) => {
       }
     );
 
-    // Trả kết quả (chứa link file audio) về lại cho frontend
     res.status(200).json(vbeeResponse.data);
 
   } catch (error) {
@@ -56,4 +48,4 @@ module.exports = async (req, res) => {
       details: error.response?.data
     });
   }
-};
+}
