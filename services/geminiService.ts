@@ -386,3 +386,37 @@ export async function generateVbeeAudio(text: string, voice: string): Promise<st
     throw error;
   }
 }
+
+export async function generateGoogleTtsAudio(text: string, voiceName: string): Promise<string> {
+  try {
+    const response = await fetch('/api/google-tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voiceName }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Google TTS request failed');
+    }
+
+    const result = await response.json();
+
+    // Dữ liệu audio là một chuỗi base64, cần chuyển đổi để trình duyệt có thể phát
+    if (result && result.audioContent) {
+      const audioBytes = atob(result.audioContent); // Giải mã base64
+      const byteArray = new Uint8Array(audioBytes.length);
+      for (let i = 0; i < audioBytes.length; i++) {
+        byteArray[i] = audioBytes.charCodeAt(i);
+      }
+      const blob = new Blob([byteArray], { type: 'audio/mpeg' });
+      return URL.createObjectURL(blob);
+    } else {
+      throw new Error('No audio content received from Google TTS.');
+    }
+
+  } catch (error) {
+    console.error('Failed to generate Google TTS audio:', error);
+    throw error;
+  }
+}
