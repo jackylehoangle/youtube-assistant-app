@@ -57,3 +57,18 @@ export enum Step {
     Voiceover = 9,
     Publishing = 10, // Re-numbered
 }
+
+// File: types.ts (thêm vào cuối file)
+
+// Định nghĩa cấu trúc của một dự án được lưu
+export interface AppState {
+  currentStep: number;
+  videoTopic: string;
+  videoIdeas: VideoIdea[];
+  selectedIdea: VideoIdea | null;
+  scriptOutline: ScriptOutline | null;
+  keywordAnalysis: KeywordAnalysisResult | null;
+  fullScript: string;
+  structuredScript: StructuredScriptScene[];
+  // Thêm bất kỳ dữ liệu nào khác bạn muốn lưu ở đây
+}
