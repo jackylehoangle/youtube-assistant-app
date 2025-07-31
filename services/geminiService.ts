@@ -146,6 +146,40 @@ export const generateKeywordAnalysis = async (idea: VideoIdea): Promise<KeywordA
     return callGenerativeModel<KeywordAnalysisResult>(prompt, schema);
 };
 
+export const generateScript = async (idea: VideoIdea, analysis: KeywordAnalysisResult, outline: ScriptOutline, lengthPreference: string): Promise<string> => {
+    const lengthInstruction = {
+        short: 'khoảng 1000 từ (5-7 phút video)',
+        medium: 'khoảng 2000 từ (10-12 phút video)',
+        long: 'hơn 3000 từ (15+ phút video)',
+    }[lengthPreference] || 'khoảng 2000 từ';
+
+    const prompt = `Bạn là một nhà biên kịch chuyên nghiệp. Dựa trên các thông tin dưới đây, hãy viết một kịch bản video chi tiết, hấp dẫn và đầy đủ.
+
+    **Thông tin đầu vào:**
+    - **Tiêu đề SEO để sử dụng:** "${analysis.seoTitle}"
+    - **Dàn ý chi tiết:**
+        - Mở đầu: ${outline.hook}
+        - Giới thiệu: ${outline.introduction}
+        - Các điểm chính: ${outline.mainPoints.map(p => `\n  - ${p.title}: ${p.description}`)}
+        - Kêu gọi hành động: ${outline.cta}
+        - Kết luận: ${outline.outro}
+    - **Từ khóa để lồng ghép:** ${analysis.primaryKeywords.join(', ')}, ${analysis.secondaryKeywords.join(', ')}
+    - **Độ dài mong muốn:** ${lengthInstruction}
+
+    **Yêu cầu:**
+    1.  **Bám sát dàn ý:** Phát triển chi tiết từng phần của dàn ý đã cung cấp.
+    2.  **Lồng ghép từ khóa:** Tích hợp các từ khóa chính và phụ một cách tự nhiên vào lời thoại.
+    3.  **Văn phong hấp dẫn:** Sử dụng ngôn ngữ gần gũi, kể chuyện lôi cuốn, phù hợp với đối tượng khán giả của video.
+    4.  **Định dạng rõ ràng:** Sử dụng markdown để định dạng kịch bản với các tiêu đề cho từng phần (ví dụ: "## Mở đầu", "## Phần 1: [Tên phần]").
+    5.  **Bao gồm chỉ dẫn sản xuất:** Trong kịch bản, hãy chèn các gợi ý về hình ảnh và âm thanh vào những vị trí phù hợp. Ví dụ:
+        - \`[VISUAL: Cận cảnh sản phẩm trên bàn xoay, ánh sáng dịu]\`
+        - \`[SOUND: Nhạc nền tò mò, bí ẩn bắt đầu nổi lên]\`
+    6.  **Đảm bảo độ dài:** Viết kịch bản có độ dài tương ứng với yêu cầu.
+    
+    QUAN TRỌNG: Toàn bộ nội dung trả về PHẢI bằng tiếng Việt.`;
+    
+    return callGenerativeModelText(prompt);
+};
 
 export const reviewAndStructureScript = async (script: string): Promise<StructuredScriptScene[]> => {
   const prompt = `Bạn là một trợ lý sản xuất video và một đạo diễn nghệ thuật. Nhiệm vụ của bạn là phân tích kịch bản thô dưới đây và cấu trúc lại nó thành các cảnh (scenes) riêng biệt để tiện cho việc sản xuất.
@@ -189,43 +223,6 @@ export const reviewAndStructureScript = async (script: string): Promise<Structur
   };
 
   return callGenerativeModel<StructuredScriptScene[]>(prompt, schema);
-};
-
-export const reviewAndStructureScript = async (script: string): Promise<StructuredScriptScene[]> => {
-    const prompt = `Bạn là một trợ lý sản xuất video. Nhiệm vụ của bạn là phân tích kịch bản thô dưới đây và cấu trúc lại nó thành các cảnh (scenes) riêng biệt để tiện cho việc sản xuất.
-
-    **Kịch bản thô:**
-    ---
-    ${script}
-    ---
-
-    **Yêu cầu:**
-    1.  Chia kịch bản thành một chuỗi các cảnh tuần tự. Một cảnh mới thường bắt đầu khi có sự thay đổi về nội dung, địa điểm hoặc có một tiêu đề phần mới.
-    2.  Với mỗi cảnh, hãy trích xuất các thông tin sau:
-        - **dialogue**: Toàn bộ lời thoại được nói trong cảnh đó. Loại bỏ tất cả các ghi chú sản xuất như [VISUAL: ...] hoặc [SOUND: ...]. Làm sạch văn bản để sẵn sàng cho việc chuyển văn bản thành giọng nói.
-        - **visualSuggestionVI (Tiếng Việt)**: Gộp tất cả các gợi ý về hình ảnh ([VISUAL:...]) trong cảnh đó thành một mô tả tiếng Việt duy nhất, mạch lạc, dễ hiểu cho người dùng. Nếu không có, trả về "Không có gợi ý cụ thể.".
-        - **visualSuggestionEN (Tiếng Anh)**: Dựa trên gợi ý tiếng Việt, tạo một prompt tiếng Anh RẤT CHI TIẾT cho AI tạo ảnh (như Midjourney, Stable Diffusion). Prompt này phải mô tả cảnh, chủ thể, hành động, ánh sáng, góc máy, và phong cách. QUAN TRỌNG: Thêm các từ khóa phủ định để ngăn AI tạo ra chữ, văn bản, logo hoặc chữ ký, ví dụ: "--no text, writing, logos, signatures, watermarks". Nếu gợi ý gốc là không có, trả về "No specific visual suggestion.".
-        - **soundSuggestion**: Gộp tất cả các gợi ý về âm thanh (bắt đầu bằng [SOUND:...) trong cảnh đó thành một mô tả duy nhất. Nếu không có, trả về "Không có gợi ý cụ thể."
-    3.  Đánh số thứ tự các cảnh bắt đầu từ 1.
-
-    QUAN TRỌNG: Toàn bộ nội dung trả về PHẢI bằng tiếng Việt, NGOẠI TRỪ 'visualSuggestionEN' phải bằng tiếng Anh.`;
-
-    const schema = {
-        type: Type.ARRAY,
-        items: {
-            type: Type.OBJECT,
-            properties: {
-                scene: { type: Type.INTEGER, description: "Số thứ tự của cảnh." },
-                dialogue: { type: Type.STRING, description: "Lời thoại sạch cho cảnh này." },
-                visualSuggestionVI: { type: Type.STRING, description: "Gợi ý hình ảnh bằng tiếng Việt cho người dùng xem." },
-                visualSuggestionEN: { type: Type.STRING, description: "Gợi ý hình ảnh chi tiết bằng tiếng Anh cho AI tạo ảnh." },
-                soundSuggestion: { type: Type.STRING, description: "Tất cả gợi ý âm thanh cho cảnh này." },
-            },
-            required: ["scene", "dialogue", "visualSuggestionVI", "visualSuggestionEN", "soundSuggestion"],
-        },
-    };
-
-    return callGenerativeModel<StructuredScriptScene[]>(prompt, schema);
 };
 
 export const generateMusicPrompts = async (scenes: StructuredScriptScene[]): Promise<MusicPrompt[]> => {
@@ -353,15 +350,14 @@ export const generatePublishingKit = async (idea: VideoIdea, script: string): Pr
 
     return callGenerativeModel<{ metadata: YouTubeMetadata; thumbnailConcepts: ThumbnailConcept[] }>(prompt, responseSchema);
 };
+
 export async function generateVbeeAudio(text: string, voice: string): Promise<string> {
   try {
-    // Gọi đến API /api/vbee của chính bạn
     const response = await fetch('/api/vbee', { 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      // Gửi văn bản và mã giọng đọc lên
       body: JSON.stringify({ text, voice }),
     });
 
@@ -373,7 +369,6 @@ export async function generateVbeeAudio(text: string, voice: string): Promise<st
 
     const result = await response.json();
     
-    // Giả sử VBee trả về URL trong trường `audio_link`
     if (result && result.audio_link) {
       return result.audio_link;
     } else {
@@ -382,7 +377,6 @@ export async function generateVbeeAudio(text: string, voice: string): Promise<st
 
   } catch (error) {
     console.error('Thất bại khi gọi hàm tạo audio:', error);
-    // Bạn có thể thêm logic hiển thị lỗi cho người dùng ở đây
     throw error;
   }
 }
@@ -402,9 +396,8 @@ export async function generateGoogleTtsAudio(text: string, voiceName: string): P
 
     const result = await response.json();
 
-    // Dữ liệu audio là một chuỗi base64, cần chuyển đổi để trình duyệt có thể phát
     if (result && result.audioContent) {
-      const audioBytes = atob(result.audioContent); // Giải mã base64
+      const audioBytes = atob(result.audioContent);
       const byteArray = new Uint8Array(audioBytes.length);
       for (let i = 0; i < audioBytes.length; i++) {
         byteArray[i] = audioBytes.charCodeAt(i);
