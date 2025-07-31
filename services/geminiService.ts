@@ -147,39 +147,48 @@ export const generateKeywordAnalysis = async (idea: VideoIdea): Promise<KeywordA
 };
 
 
-export const generateScript = async (idea: VideoIdea, analysis: KeywordAnalysisResult, outline: ScriptOutline, lengthPreference: string): Promise<string> => {
-    const lengthInstruction = {
-        short: 'khoảng 1000 từ (5-7 phút video)',
-        medium: 'khoảng 2000 từ (10-12 phút video)',
-        long: 'hơn 3000 từ (15+ phút video)',
-    }[lengthPreference] || 'khoảng 2000 từ';
+export const reviewAndStructureScript = async (script: string): Promise<StructuredScriptScene[]> => {
+  const prompt = `Bạn là một trợ lý sản xuất video và một đạo diễn nghệ thuật. Nhiệm vụ của bạn là phân tích kịch bản thô dưới đây và cấu trúc lại nó thành các cảnh (scenes) riêng biệt để tiện cho việc sản xuất.
 
-    const prompt = `Bạn là một nhà biên kịch chuyên nghiệp. Dựa trên các thông tin dưới đây, hãy viết một kịch bản video chi tiết, hấp dẫn và đầy đủ.
+  **Kịch bản thô:**
+  ---
+  ${script}
+  ---
 
-    **Thông tin đầu vào:**
-    - **Tiêu đề SEO để sử dụng:** "${analysis.seoTitle}"
-    - **Dàn ý chi tiết:**
-        - Mở đầu: ${outline.hook}
-        - Giới thiệu: ${outline.introduction}
-        - Các điểm chính: ${outline.mainPoints.map(p => `\n  - ${p.title}: ${p.description}`)}
-        - Kêu gọi hành động: ${outline.cta}
-        - Kết luận: ${outline.outro}
-    - **Từ khóa để lồng ghép:** ${analysis.primaryKeywords.join(', ')}, ${analysis.secondaryKeywords.join(', ')}
-    - **Độ dài mong muốn:** ${lengthInstruction}
+  **Yêu cầu:**
+  1.  Chia kịch bản thành một chuỗi các cảnh tuần tự. Một cảnh mới thường bắt đầu khi có sự thay đổi về nội dung hoặc có một tiêu đề phần mới.
+  2.  Với mỗi cảnh, hãy trích xuất các thông tin sau:
+      - **dialogue**: Toàn bộ lời thoại sạch, sẵn sàng cho việc chuyển văn bản thành giọng nói. Loại bỏ tất cả các ghi chú sản xuất như [VISUAL: ...] hoặc [SOUND: ...].
+      - **visualSuggestionVI (Tiếng Việt)**: Gộp tất cả các gợi ý về hình ảnh ([VISUAL:...]) trong cảnh đó thành một mô tả tiếng Việt duy nhất, mạch lạc, dễ hiểu cho người dùng. Nếu không có, trả về "Không có gợi ý cụ thể.".
+      - **visualSuggestionEN (Tiếng Anh)**: Dựa trên gợi ý tiếng Việt, tạo một prompt tiếng Anh CỰC KỲ CHI TIẾT VÀ MANG TÍNH NGHỆ THUẬT cho AI tạo ảnh (như Midjourney, Stable Diffusion). Prompt này phải bao gồm:
+          - **Chủ thể và Hành động:** Mô tả rõ nhân vật chính và họ đang làm gì.
+          - **Bối cảnh:** Mô tả chi tiết môi trường xung quanh (trong nhà, ngoài trời, văn phòng, quán cà phê...).
+          - **Ánh sáng:** Gợi ý về ánh sáng (ví dụ: soft natural light, dramatic cinematic lighting, golden hour).
+          - **Góc máy:** Gợi ý về góc máy (ví dụ: close-up shot, wide-angle shot, pov shot).
+          - **Phong cách:** Thêm các từ khóa về phong cách để ảnh đẹp hơn (ví dụ: photorealistic, cinematic, vibrant colors, 8k, professional photography).
+          - **Từ khóa phủ định:** Luôn kết thúc bằng '--no text, writing, logos, signatures, watermarks' để tránh AI tạo ra chữ.
+          Nếu gợi ý gốc là không có, hãy tự sáng tạo một prompt phù hợp với lời thoại của cảnh.
+      - **soundSuggestion**: Gộp tất cả các gợi ý về âm thanh ([SOUND:...]) trong cảnh đó thành một mô tả duy nhất. Nếu không có, trả về "Không có gợi ý cụ thể."
+  3.  Đánh số thứ tự các cảnh bắt đầu từ 1.
 
-    **Yêu cầu:**
-    1.  **Bám sát dàn ý:** Phát triển chi tiết từng phần của dàn ý đã cung cấp.
-    2.  **Lồng ghép từ khóa:** Tích hợp các từ khóa chính và phụ một cách tự nhiên vào lời thoại.
-    3.  **Văn phong hấp dẫn:** Sử dụng ngôn ngữ gần gũi, kể chuyện lôi cuốn, phù hợp với đối tượng khán giả của video.
-    4.  **Định dạng rõ ràng:** Sử dụng markdown để định dạng kịch bản với các tiêu đề cho từng phần (ví dụ: "## Mở đầu", "## Phần 1: [Tên phần]").
-    5.  **Bao gồm chỉ dẫn sản xuất:** Trong kịch bản, hãy chèn các gợi ý về hình ảnh và âm thanh vào những vị trí phù hợp. Ví dụ:
-        - \`[VISUAL: Cận cảnh sản phẩm trên bàn xoay, ánh sáng dịu]\`
-        - \`[SOUND: Nhạc nền tò mò, bí ẩn bắt đầu nổi lên]\`
-    6.  **Đảm bảo độ dài:** Viết kịch bản có độ dài tương ứng với yêu cầu.
-    
-    QUAN TRỌNG: Toàn bộ nội dung trả về PHẢI bằng tiếng Việt.`;
-    
-    return callGenerativeModelText(prompt);
+  QUAN TRỌNG: Toàn bộ nội dung trả về PHẢI bằng tiếng Việt, NGOẠI TRỪ 'visualSuggestionEN' phải bằng tiếng Anh.`;
+
+  const schema = {
+      type: Type.ARRAY,
+      items: {
+          type: Type.OBJECT,
+          properties: {
+              scene: { type: Type.INTEGER, description: "Số thứ tự của cảnh." },
+              dialogue: { type: Type.STRING, description: "Lời thoại sạch cho cảnh này." },
+              visualSuggestionVI: { type: Type.STRING, description: "Gợi ý hình ảnh bằng tiếng Việt cho người dùng xem." },
+              visualSuggestionEN: { type: Type.STRING, description: "Gợi ý hình ảnh chi tiết bằng tiếng Anh cho AI tạo ảnh." },
+              soundSuggestion: { type: Type.STRING, description: "Tất cả gợi ý âm thanh cho cảnh này." },
+          },
+          required: ["scene", "dialogue", "visualSuggestionVI", "visualSuggestionEN", "soundSuggestion"],
+      },
+  };
+
+  return callGenerativeModel<StructuredScriptScene[]>(prompt, schema);
 };
 
 export const reviewAndStructureScript = async (script: string): Promise<StructuredScriptScene[]> => {
