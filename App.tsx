@@ -153,6 +153,13 @@ const App: React.FC = () => {
             window.localStorage.removeItem(LOCAL_STORAGE_KEY);
         } catch (err) { console.error("Failed to clear local storage:", err); }
     };
+
+    const handleNavigateToStep = (step: Step) => {
+    if (step < currentStep) {
+        setCurrentStep(step);
+        setError(null);
+    }
+};
     
     // ... (Giữ nguyên các hàm handle cũ từ handleNavigateToStep đến handleDownloadAsset) ...
 
