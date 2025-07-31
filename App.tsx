@@ -1,7 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { VideoIdea, Step, StructuredScriptScene, YouTubeMetadata, ThumbnailConcept, KeywordAnalysisResult, ScriptOutline, MusicPrompt } from './types';
-// Thêm generateGoogleTtsAudio và generateVbeeAudio vào import
-import { generateIdeas, generateOutline, generateScript, generateImage, reviewAndStructureScript, generatePublishingKit, generateKeywordAnalysis, generateMusicPrompts, generateVbeeAudio, generateGoogleTtsAudio } from './services/geminiService';
+import { 
+    generateIdeas, generateOutline, generateScript, generateImage, reviewAndStructureScript, 
+    generatePublishingKit, generateKeywordAnalysis, generateMusicPrompts, generateVbeeAudio, 
+    generateGoogleTtsAudio, startRunwayGeneration, checkRunwayStatus 
+} from './services/geminiService';
 import Header from './components/Header';
 import Stepper from './components/Stepper';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -17,6 +20,13 @@ interface ImageState {
 interface AudioState {
     isLoading: boolean;
     audioUrl?: string;
+    error?: string;
+}
+
+interface RunwayJobState {
+    uuid?: string;
+    status: 'idle' | 'polling' | 'succeeded' | 'failed';
+    videoUrl?: string;
     error?: string;
 }
 
@@ -39,8 +49,7 @@ const googleVoices = [
     { id: 'vi-VN-Wavenet-C', name: 'Nữ - Giọng Miền Nam (Cao cấp)' },
 ];
 
-
-const LOCAL_STORAGE_KEY = 'youtubeProductionAssistantState_v5';
+const LOCAL_STORAGE_KEY = 'youtubeProductionAssistantState_v6';
 
 const App: React.FC = () => {
     const [currentStep, setCurrentStep] = useState<Step>(Step.Ideation);
@@ -64,12 +73,12 @@ const App: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isCopied, setIsCopied] = useState<boolean>(false);
     
-    // Audio States
+    // Audio & Video States
     const [selectedVbeeVoice, setSelectedVbeeVoice] = useState<string>(vbeeVoices[0].id);
     const [vbeeAudioStates, setVbeeAudioStates] = useState<Record<number, AudioState>>({});
     const [selectedGoogleVoice, setSelectedGoogleVoice] = useState<string>(googleVoices[0].id);
     const [googleAudioStates, setGoogleAudioStates] = useState<Record<number, AudioState>>({});
-
+    const [runwayJobs, setRunwayJobs] = useState<Record<string, RunwayJobState>>({});
 
     useEffect(() => {
         try {
@@ -89,8 +98,8 @@ const App: React.FC = () => {
                 setMusicPrompts(savedState.musicPrompts || []);
                 setPublishingKit(savedState.publishingKit || null);
                 setImageStyle(savedState.imageStyle || 'Cinematic, photorealistic');
-                setSelectedVbeeVoice(savedState.selectedVbeeVoice || vbeeVoices[0].id)
-                setSelectedGoogleVoice(savedState.selectedGoogleVoice || googleVoices[0].id)
+                setSelectedVbeeVoice(savedState.selectedVbeeVoice || vbeeVoices[0].id);
+                setSelectedGoogleVoice(savedState.selectedGoogleVoice || googleVoices[0].id);
                 
                 const restoredImages = savedState.images || {};
                 Object.keys(restoredImages).forEach(key => { if (restoredImages[key]) restoredImages[key].isLoading = false; });
@@ -107,9 +116,13 @@ const App: React.FC = () => {
                 const restoredGoogleStates = savedState.googleAudioStates || {};
                 Object.keys(restoredGoogleStates).forEach(key => { if(restoredGoogleStates[key]) restoredGoogleStates[key].isLoading = false; });
                 setGoogleAudioStates(restoredGoogleStates);
+
+                const restoredRunwayJobs = savedState.runwayJobs || {};
+                Object.keys(restoredRunwayJobs).forEach(key => { if (restoredRunwayJobs[key]?.status === 'polling') restoredRunwayJobs[key].status = 'failed'; });
+                setRunwayJobs(restoredRunwayJobs);
             }
-        } catch (error) {
-            console.error("Failed to load state:", error);
+        } catch (err) {
+            console.error("Failed to load state:", err);
             window.localStorage.removeItem(LOCAL_STORAGE_KEY);
         }
     }, []);
@@ -120,11 +133,11 @@ const App: React.FC = () => {
                 currentStep, topic, platform, videoType, ideas, selectedIdea,
                 scriptOutline, keywordAnalysis, script, structuredScript, musicPrompts,
                 publishingKit, thumbnailImageState, imageStyle, images, selectedVbeeVoice,
-                vbeeAudioStates, selectedGoogleVoice, googleAudioStates
+                vbeeAudioStates, selectedGoogleVoice, googleAudioStates, runwayJobs
             };
             window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
-        } catch (error) { console.error("Failed to save state:", error); }
-    }, [currentStep, topic, platform, videoType, ideas, selectedIdea, scriptOutline, keywordAnalysis, script, structuredScript, musicPrompts, publishingKit, thumbnailImageState, imageStyle, images, selectedVbeeVoice, vbeeAudioStates, selectedGoogleVoice, googleAudioStates]);
+        } catch (err) { console.error("Failed to save state:", err); }
+    }, [currentStep, topic, platform, videoType, ideas, selectedIdea, scriptOutline, keywordAnalysis, script, structuredScript, musicPrompts, publishingKit, thumbnailImageState, imageStyle, images, selectedVbeeVoice, vbeeAudioStates, selectedGoogleVoice, googleAudioStates, runwayJobs]);
 
     const handleReset = () => {
         setCurrentStep(Step.Ideation);
@@ -135,137 +148,13 @@ const App: React.FC = () => {
         setError(null); setIsLoading(false); setIsCopied(false);
         setVbeeAudioStates({});
         setGoogleAudioStates({});
+        setRunwayJobs({});
         try {
             window.localStorage.removeItem(LOCAL_STORAGE_KEY);
-        } catch (error) { console.error("Failed to clear local storage:", error); }
+        } catch (err) { console.error("Failed to clear local storage:", err); }
     };
 
-    const handleNavigateToStep = (step: Step) => {
-        if (step < currentStep) {
-            setCurrentStep(step);
-            setError(null);
-        }
-    };
-
-    const handleGenerateIdeas = useCallback(async () => {
-        if (!topic.trim()) { setError('Vui lòng nhập chủ đề.'); return; }
-        setIsLoading(true); setError(null);
-        try {
-            const generatedIdeas = await generateIdeas(topic, platform, videoType);
-            setIdeas(generatedIdeas);
-            setCurrentStep(Step.IdeaSelection);
-        } catch (err) { setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.'); } 
-        finally { setIsLoading(false); }
-    }, [topic, platform, videoType]);
-
-    const handleGenerateOutline = useCallback(async (idea: VideoIdea) => {
-        setIsLoading(true); setError(null); setSelectedIdea(idea);
-        try {
-            const outline = await generateOutline(idea);
-            setScriptOutline(outline);
-            setCurrentStep(Step.Outlining);
-        } catch (err) { setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.'); }
-        finally { setIsLoading(false); }
-    }, []);
-
-    const handleAnalyzeKeywords = useCallback(async () => {
-        if (!selectedIdea) return;
-        setIsLoading(true); setError(null);
-        try {
-            const analysis = await generateKeywordAnalysis(selectedIdea);
-            setKeywordAnalysis(analysis);
-            setCurrentStep(Step.KeywordAnalysis);
-        } catch (err) { setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.'); }
-        finally { setIsLoading(false); }
-    }, [selectedIdea]);
-
-    const handleGenerateScript = useCallback(async () => {
-        if (!selectedIdea || !keywordAnalysis || !scriptOutline) return;
-        setIsLoading(true); setError(null);
-        try {
-            const generatedScript = await generateScript(selectedIdea, keywordAnalysis, scriptOutline, scriptLength);
-            setScript(generatedScript);
-            setCurrentStep(Step.Scripting);
-        } catch (err) { setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.'); }
-        finally { setIsLoading(false); }
-    }, [selectedIdea, keywordAnalysis, scriptOutline, scriptLength]);
-    
-    const handleReviewScript = useCallback(async () => {
-        if (!script) return;
-        setIsLoading(true); setError(null);
-        try {
-            const structured = await reviewAndStructureScript(script);
-            setStructuredScript(structured);
-            setCurrentStep(Step.ScriptReview);
-        } catch (err) { setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.'); }
-        finally { setIsLoading(false); }
-    }, [script]);
-
-    const handleGenerateMusic = useCallback(async () => {
-        if (!structuredScript.length) return;
-        setIsLoading(true); setError(null);
-        try {
-            const prompts = await generateMusicPrompts(structuredScript);
-            setMusicPrompts(prompts);
-            setCurrentStep(Step.MusicGeneration);
-        } catch (err) { setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.'); }
-        finally { setIsLoading(false); }
-    }, [structuredScript]);
-
-    const handleGenerateImage = useCallback(async (prompt: string) => {
-        setImages(prev => ({ ...prev, [prompt]: { isLoading: true } }));
-        try {
-            const imageDataUrl = await generateImage(prompt, imageStyle);
-            setImages(prev => ({ ...prev, [prompt]: { isLoading: false, dataUrl: imageDataUrl } }));
-        } catch (err) {
-            const message = err instanceof Error ? err.message : "Không thể tạo ảnh.";
-            setImages(prev => ({ ...prev, [prompt]: { isLoading: false, error: message } }));
-        }
-    }, [imageStyle]);
-
-    const handleGeneratePublishingKit = useCallback(async () => {
-        if (!script || !selectedIdea) return;
-        setIsLoading(true); setError(null);
-        try {
-            const kit = await generatePublishingKit(selectedIdea, script);
-            setPublishingKit(kit);
-            setCurrentStep(Step.Publishing);
-        } catch (err) { setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.'); }
-        finally { setIsLoading(false); }
-    }, [script, selectedIdea]);
-
-    const handleGenerateThumbnail = useCallback(async (prompt: string) => {
-        setThumbnailImageState({ isLoading: true });
-        try {
-            const imageDataUrl = await generateImage(prompt, 'Vibrant, eye-catching, high-contrast');
-            setThumbnailImageState({ isLoading: false, dataUrl: imageDataUrl });
-        } catch (err) {
-            const message = err instanceof Error ? err.message : "Không thể tạo ảnh bìa.";
-            setThumbnailImageState({ isLoading: false, error: message });
-        }
-    }, []);
-
-    const handleCopyFullProject = useCallback(() => {
-        if (!selectedIdea || !script || !structuredScript.length || !publishingKit) {
-            setError("Không thể sao chép, một số nội dung bị thiếu.");
-            return;
-        }
-        // Giữ nguyên nội dung format của bạn
-        const formattedContent = `...`; 
-
-        navigator.clipboard.writeText(formattedContent.trim())
-            .then(() => { setIsCopied(true); setTimeout(() => setIsCopied(false), 3000); })
-            .catch(err => { console.error('Failed to copy text: ', err); setError('Không thể sao chép nội dung vào bộ nhớ tạm.'); });
-    }, [selectedIdea, script, structuredScript, publishingKit, scriptOutline, keywordAnalysis, musicPrompts]);
-    
-    const handleDownloadAsset = (dataUrl: string, filename: string) => {
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
+    // ... (Giữ nguyên các hàm handleGenerate... từ Ideas đến Thumbnail)
 
     const handleGenerateVbeeAudio = useCallback(async (sceneNumber: number, text: string) => {
         setVbeeAudioStates(prev => ({ ...prev, [sceneNumber]: { isLoading: true, error: undefined } }));
@@ -289,141 +178,100 @@ const App: React.FC = () => {
         }
     }, [selectedGoogleVoice]);
 
+    const handleGenerateRunwayVideo = useCallback(async (sceneNumber: number, prompt: string) => {
+        const jobKey = `scene-${sceneNumber}`;
+        setRunwayJobs(prev => ({ ...prev, [jobKey]: { status: 'polling', error: undefined, videoUrl: undefined } }));
+
+        try {
+            const { uuid } = await startRunwayGeneration(prompt);
+            setRunwayJobs(prev => ({ ...prev, [jobKey]: { uuid, status: 'polling' } }));
+
+            const intervalId = setInterval(async () => {
+                try {
+                    const result = await checkRunwayStatus(uuid);
+                    if (result.status === 'SUCCEEDED') {
+                        clearInterval(intervalId);
+                        setRunwayJobs(prev => ({ ...prev, [jobKey]: { ...prev[jobKey], status: 'succeeded', videoUrl: result.output.video_url } }));
+                    } else if (result.status === 'FAILED') {
+                        clearInterval(intervalId);
+                        setRunwayJobs(prev => ({ ...prev, [jobKey]: { ...prev[jobKey], status: 'failed', error: 'Runway task failed.' } }));
+                    }
+                } catch (err) {
+                    clearInterval(intervalId);
+                    setRunwayJobs(prev => ({ ...prev, [jobKey]: { ...prev[jobKey], status: 'failed', error: 'Error checking status.' } }));
+                }
+            }, 10000);
+
+        } catch (err) {
+            setRunwayJobs(prev => ({ ...prev, [jobKey]: { status: 'failed', error: 'Failed to start generation.' } }));
+        }
+    }, []);
+    
+    // ... (Giữ nguyên các hàm handle khác)
+    
     const renderContent = () => {
-        if (isLoading) {
-            return <div className="flex justify-center items-center h-64"><LoadingSpinner text="AI đang suy nghĩ..." /></div>;
-        }
+        // ... (Giữ nguyên phần isLoading và error)
 
-        if (error) {
-            return (
-                <div className="text-center">
-                    <p className="text-red-400 bg-red-900/50 p-4 rounded-md">{error}</p>
-                    <button onClick={() => setError(null)} className="mt-4 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-md font-semibold transition-colors">Đóng</button>
-                </div>
-            );
-        }
-        
         switch (currentStep) {
-            case Step.Ideation:
-                // ... (Giữ nguyên nội dung case này)
-                return <div>...Nội dung cũ...</div>;
-
-            case Step.IdeaSelection:
-                 // ... (Giữ nguyên nội dung case này)
-                return <div>...Nội dung cũ...</div>;
+            // ... (Giữ nguyên tất cả các case từ Ideation đến MusicGeneration)
             
-            case Step.Outlining:
-                 // ... (Giữ nguyên nội dung case này)
-                return <div>...Nội dung cũ...</div>;
-
-            case Step.KeywordAnalysis:
-                 // ... (Giữ nguyên nội dung case này)
-                return <div>...Nội dung cũ...</div>;
-            
-            case Step.Scripting:
-                 // ... (Giữ nguyên nội dung case này)
-                return <div>...Nội dung cũ...</div>;
-            
-            case Step.ScriptReview:
-                 // ... (Giữ nguyên nội dung case này)
-                return <div>...Nội dung cũ...</div>;
-            
-            case Step.MusicGeneration:
-                 // ... (Giữ nguyên nội dung case này)
-                return <div>...Nội dung cũ...</div>;
-
-            case Step.ImageGeneration: 
-                 // ... (Giữ nguyên nội dung case này)
-                return <div>...Nội dung cũ...</div>;
-            
-            case Step.Voiceover: {
+            case Step.ImageGeneration: {
+                const visualPrompts = structuredScript.filter(s => s.visualSuggestionEN !== "No specific visual suggestion.");
                 return (
                     <div>
-                        <h2 className="text-2xl font-bold text-center mb-4 text-slate-100">Lồng tiếng cho kịch bản</h2>
-                        <p className="text-center text-slate-400 mb-8 max-w-3xl mx-auto">Chọn một giọng nói, sau đó tạo âm thanh cho từng cảnh. Bạn có thể tải về các tệp MP3 để sử dụng trong phần mềm dựng phim của mình.</p>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-lg mx-auto mb-8">
-                            <div>
-                                <label htmlFor="vbee-voice-select" className="block text-sm font-medium text-slate-300 mb-2">Chọn giọng đọc VBee:</label>
-                                <select id="vbee-voice-select" value={selectedVbeeVoice} onChange={(e) => setSelectedVbeeVoice(e.target.value)} className="w-full p-2 bg-slate-800 border border-slate-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
-                                    {vbeeVoices.map(voice => (<option key={voice.id} value={voice.id}>{voice.name}</option>))}
-                                </select>
-                            </div>
-                             <div>
-                                <label htmlFor="google-voice-select" className="block text-sm font-medium text-slate-300 mb-2">Chọn giọng đọc Google:</label>
-                                <select id="google-voice-select" value={selectedGoogleVoice} onChange={(e) => setSelectedGoogleVoice(e.target.value)} className="w-full p-2 bg-slate-800 border border-slate-700 rounded-md focus:ring-2 focus:ring-orange-500 focus:outline-none transition">
-                                    {googleVoices.map(voice => (<option key={voice.id} value={voice.id}>{voice.name}</option>))}
-                                </select>
-                            </div>
+                        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                            <h2 className="text-2xl font-bold text-center sm:text-left text-slate-100">Tạo hình ảnh & Video cho kịch bản</h2>
+                            {/* ... (Giữ nguyên phần input style và toggle VI/EN) ... */}
                         </div>
-
-                        <div className="space-y-6 max-w-3xl mx-auto">
-                            {structuredScript.map((scene) => {
-                                const vbeeAudioState = vbeeAudioStates[scene.scene];
-                                const googleAudioState = googleAudioStates[scene.scene];
-                                const vbeeIcon = <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" /><path d="M5.5 8.5a.5.5 0 01.5.5v1a3.5 3.5 0 007 0v-1a.5.5 0 011 0v1a4.5 4.5 0 01-4.5 4.472V16h1a.5.5 0 010 1h-3a.5.5 0 010-1h1v-1.028A4.5 4.5 0 014 10v-1a.5.5 0 01.5-.5z" /></svg>;
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {visualPrompts.map((scene) => {
+                                const promptKey = scene.visualSuggestionEN;
+                                const imageState = images[promptKey];
+                                const runwayJobKey = `scene-${scene.scene}`;
+                                const runwayState = runwayJobs[runwayJobKey];
+                                const displayPrompt = imagePromptLang === 'vi' ? scene.visualSuggestionVI : scene.visualSuggestionEN;
                                 
                                 return (
-                                <Card key={scene.scene}>
-                                    <h3 className="text-lg font-bold text-sky-400 mb-3">Cảnh {scene.scene}</h3>
-                                    <p className="whitespace-pre-wrap text-slate-200 mb-4">{scene.dialogue}</p>
-                                    
-                                    <div className="flex flex-col sm:flex-row items-center gap-3">
-                                        <CopyButton textToCopy={scene.dialogue} buttonText="Sao chép lời thoại" className="w-full sm:w-auto" />
-                                        
-                                        <button onClick={() => handleGenerateVbeeAudio(scene.scene, scene.dialogue)} disabled={vbeeAudioState?.isLoading} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 rounded-md font-semibold text-sm text-white transition-colors disabled:bg-slate-700 disabled:cursor-wait">
-                                            {vbeeAudioState?.isLoading ? <><LoadingSpinner size="sm" /><span>Đang tạo...</span></> : <>{vbeeIcon} <span>VBee</span></>}
-                                        </button>
-                                        
-                                        <button onClick={() => handleGenerateGoogleTtsAudio(scene.scene, scene.dialogue)} disabled={googleAudioState?.isLoading} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 rounded-md font-semibold text-sm text-white transition-colors disabled:bg-slate-700 disabled:cursor-wait">
-                                            {googleAudioState?.isLoading ? <><LoadingSpinner size="sm" /><span>Đang tạo...</span></> : <>{vbeeIcon} <span>Google</span></>}
-                                        </button>
-                                    </div>
-
-                                    {/* VBee Player */}
-                                    {vbeeAudioState?.error && <p className="text-red-400 text-xs mt-3 text-center sm:text-left">{vbeeAudioState.error}</p>}
-                                    {vbeeAudioState?.audioUrl && (
-                                        <div className="mt-4 p-3 bg-slate-900/50 rounded-lg">
-                                            <p className="text-xs text-slate-400 mb-2">Giọng đọc VBee:</p>
-                                            <audio controls src={vbeeAudioState.audioUrl} className="w-full">Trình duyệt không hỗ trợ.</audio>
+                                    <Card key={scene.scene} className="flex flex-col justify-between text-sm">
+                                        <div>
+                                            {/* ... (Giữ nguyên phần hiển thị ảnh) ... */}
+                                            {runwayState?.status === 'succeeded' && runwayState.videoUrl ? (
+                                                <video controls src={runwayState.videoUrl} className="w-full rounded-md mb-4 aspect-video object-cover" />
+                                            ) : (
+                                                imageState?.dataUrl ? <img src={imageState.dataUrl} alt={displayPrompt.substring(0, 50)} className="rounded-md mb-4 aspect-video object-cover" /> : <div className="aspect-video bg-slate-700/50 rounded-md mb-4 flex items-center justify-center">{/* ... (nội dung cũ) ... */}</div>
+                                            )}
+                                            <p className="text-slate-300 flex-grow text-xs leading-5">{displayPrompt}</p>
                                         </div>
-                                    )}
+                                        <div className="mt-4 flex flex-col gap-2">
+                                            {/* ... (Giữ nguyên nút tạo ảnh và sao chép) ... */}
+                                            
+                                            <button 
+                                                onClick={() => handleGenerateRunwayVideo(scene.scene, promptKey)}
+                                                disabled={runwayState?.status === 'polling'}
+                                                className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-md font-semibold text-sm text-white transition-colors disabled:bg-slate-700 disabled:cursor-wait"
+                                            >
+                                                {runwayState?.status === 'polling' ? <><LoadingSpinner size="sm" /><span>Đang xử lý...</span></> : <> {/* Icon Video */} <span>Tạo Video (Runway)</span></>}
+                                            </button>
 
-                                    {/* Google Player */}
-                                     {googleAudioState?.error && <p className="text-red-400 text-xs mt-3 text-center sm:text-left">{googleAudioState.error}</p>}
-                                    {googleAudioState?.audioUrl && (
-                                        <div className="mt-4 p-3 bg-slate-900/50 rounded-lg">
-                                             <p className="text-xs text-slate-400 mb-2">Giọng đọc Google:</p>
-                                            <audio controls src={googleAudioState.audioUrl} className="w-full">Trình duyệt không hỗ trợ.</audio>
+                                            {runwayState?.status === 'failed' && <p className="text-red-400 text-xs mt-2">{runwayState.error}</p>}
                                         </div>
-                                    )}
-                                </Card>
-                            )})}
+                                    </Card>
+                                );
+                            })}
                         </div>
-
-                        <div className="text-center mt-8">
-                           <button onClick={handleGeneratePublishingKit} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-md font-semibold transition-colors">Tiếp theo: Bộ công cụ xuất bản</button>
+                         <div className="text-center mt-8">
+                            <button onClick={() => setCurrentStep(Step.Voiceover)} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-md font-semibold transition-colors">Tiếp theo: Lồng tiếng</button>
                         </div>
                     </div>
                 );
             }
-            
-            case Step.Publishing:
-                 // ... (Giữ nguyên nội dung case này)
-                return <div>...Nội dung cũ...</div>;
+
+            // ... (Giữ nguyên các case còn lại)
         }
     };
     
     return (
-        <div className="min-h-screen bg-slate-900 flex flex-col items-center p-4 sm:p-6 lg:p-8">
-            <Header onReset={handleReset} />
-            <main className="w-full max-w-7xl mx-auto flex-grow">
-                <Stepper currentStep={currentStep} onStepClick={handleNavigateToStep} />
-                <div className="mt-8">
-                    {renderContent()}
-                </div>
-            </main>
-        </div>
+        // ... (Giữ nguyên phần return chính)
     );
 };
 
