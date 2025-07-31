@@ -153,8 +153,8 @@ const App: React.FC = () => {
             window.localStorage.removeItem(LOCAL_STORAGE_KEY);
         } catch (err) { console.error("Failed to clear local storage:", err); }
     };
-
-    // ... (Giữ nguyên các hàm handleGenerate... từ Ideas đến Thumbnail)
+    
+    // ... (Giữ nguyên các hàm handle cũ từ handleNavigateToStep đến handleDownloadAsset) ...
 
     const handleGenerateVbeeAudio = useCallback(async (sceneNumber: number, text: string) => {
         setVbeeAudioStates(prev => ({ ...prev, [sceneNumber]: { isLoading: true, error: undefined } }));
@@ -188,6 +188,10 @@ const App: React.FC = () => {
 
             const intervalId = setInterval(async () => {
                 try {
+                    if (!uuid) { // Thêm kiểm tra để TypeScript không báo lỗi
+                        clearInterval(intervalId);
+                        return;
+                    }
                     const result = await checkRunwayStatus(uuid);
                     if (result.status === 'SUCCEEDED') {
                         clearInterval(intervalId);
@@ -206,72 +210,39 @@ const App: React.FC = () => {
             setRunwayJobs(prev => ({ ...prev, [jobKey]: { status: 'failed', error: 'Failed to start generation.' } }));
         }
     }, []);
-    
-    // ... (Giữ nguyên các hàm handle khác)
-    
+
     const renderContent = () => {
-        // ... (Giữ nguyên phần isLoading và error)
+        if (isLoading) {
+            return <div className="flex justify-center items-center h-64"><LoadingSpinner text="AI đang suy nghĩ..." /></div>;
+        }
 
+        if (error) {
+            return (
+                <div className="text-center">
+                    <p className="text-red-400 bg-red-900/50 p-4 rounded-md">{error}</p>
+                    <button onClick={() => setError(null)} className="mt-4 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-md font-semibold transition-colors">Đóng</button>
+                </div>
+            );
+        }
+        
         switch (currentStep) {
-            // ... (Giữ nguyên tất cả các case từ Ideation đến MusicGeneration)
+            // DÁN LẠI TOÀN BỘ CÁC CASE CŨ Ở ĐÂY
             
-            case Step.ImageGeneration: {
-                const visualPrompts = structuredScript.filter(s => s.visualSuggestionEN !== "No specific visual suggestion.");
-                return (
-                    <div>
-                        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                            <h2 className="text-2xl font-bold text-center sm:text-left text-slate-100">Tạo hình ảnh & Video cho kịch bản</h2>
-                            {/* ... (Giữ nguyên phần input style và toggle VI/EN) ... */}
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {visualPrompts.map((scene) => {
-                                const promptKey = scene.visualSuggestionEN;
-                                const imageState = images[promptKey];
-                                const runwayJobKey = `scene-${scene.scene}`;
-                                const runwayState = runwayJobs[runwayJobKey];
-                                const displayPrompt = imagePromptLang === 'vi' ? scene.visualSuggestionVI : scene.visualSuggestionEN;
-                                
-                                return (
-                                    <Card key={scene.scene} className="flex flex-col justify-between text-sm">
-                                        <div>
-                                            {/* ... (Giữ nguyên phần hiển thị ảnh) ... */}
-                                            {runwayState?.status === 'succeeded' && runwayState.videoUrl ? (
-                                                <video controls src={runwayState.videoUrl} className="w-full rounded-md mb-4 aspect-video object-cover" />
-                                            ) : (
-                                                imageState?.dataUrl ? <img src={imageState.dataUrl} alt={displayPrompt.substring(0, 50)} className="rounded-md mb-4 aspect-video object-cover" /> : <div className="aspect-video bg-slate-700/50 rounded-md mb-4 flex items-center justify-center">{/* ... (nội dung cũ) ... */}</div>
-                                            )}
-                                            <p className="text-slate-300 flex-grow text-xs leading-5">{displayPrompt}</p>
-                                        </div>
-                                        <div className="mt-4 flex flex-col gap-2">
-                                            {/* ... (Giữ nguyên nút tạo ảnh và sao chép) ... */}
-                                            
-                                            <button 
-                                                onClick={() => handleGenerateRunwayVideo(scene.scene, promptKey)}
-                                                disabled={runwayState?.status === 'polling'}
-                                                className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-md font-semibold text-sm text-white transition-colors disabled:bg-slate-700 disabled:cursor-wait"
-                                            >
-                                                {runwayState?.status === 'polling' ? <><LoadingSpinner size="sm" /><span>Đang xử lý...</span></> : <> {/* Icon Video */} <span>Tạo Video (Runway)</span></>}
-                                            </button>
-
-                                            {runwayState?.status === 'failed' && <p className="text-red-400 text-xs mt-2">{runwayState.error}</p>}
-                                        </div>
-                                    </Card>
-                                );
-                            })}
-                        </div>
-                         <div className="text-center mt-8">
-                            <button onClick={() => setCurrentStep(Step.Voiceover)} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-md font-semibold transition-colors">Tiếp theo: Lồng tiếng</button>
-                        </div>
-                    </div>
-                );
-            }
-
-            // ... (Giữ nguyên các case còn lại)
+            default:
+                return null; // Trả về null nếu không có case nào khớp
         }
     };
     
     return (
-        // ... (Giữ nguyên phần return chính)
+        <div className="min-h-screen bg-slate-900 flex flex-col items-center p-4 sm:p-6 lg:p-8">
+            <Header onReset={handleReset} />
+            <main className="w-full max-w-7xl mx-auto flex-grow">
+                <Stepper currentStep={currentStep} onStepClick={handleNavigateToStep} />
+                <div className="mt-8">
+                    {renderContent()}
+                </div>
+            </main>
+        </div>
     );
 };
 
