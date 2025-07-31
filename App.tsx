@@ -29,18 +29,18 @@ const vbeeVoices = [
 ];
 
 const googleVoices = [
-    { id: 'vi-VN-Standard-A', name: 'Nữ - Giọng Miền Bắc 1' },
-    { id: 'vi-VN-Standard-C', name: 'Nữ - Giọng Miền Nam' },
+    { id: 'vi-VN-Standard-D', name: 'Nam - Giọng Miền Nam' },
     { id: 'vi-VN-Standard-B', name: 'Nam - Giọng Miền Bắc' },
-    { id: 'vi-VN-Standard-D', name: 'Nam - Giọng Miền Nam 1' },
-    { id: 'vi-VN-Wavenet-A', name: 'Nữ - Giọng Miền Bắc 2 (Cao cấp)' },
-    { id: 'vi-VN-Wavenet-B', name: 'Nam - Giọng Miền Bắc 2 (Cao cấp)' },
-    { id: 'vi-VN-Wavenet-C', name: 'Nữ - Giọng Miền Nam 2 (Cao cấp)' },
-    { id: 'vi-VN-Wavenet-D', name: 'Nam - Giọng Miền Nam 2 (Cao cấp)' },
+    { id: 'vi-VN-Standard-A', name: 'Nữ - Giọng Miền Bắc' },
+    { id: 'vi-VN-Standard-C', name: 'Nữ - Giọng Miền Nam' },
+    { id: 'vi-VN-Wavenet-D', name: 'Nam - Giọng Miền Nam (Cao cấp)' },
+    { id: 'vi-VN-Wavenet-B', name: 'Nam - Giọng Miền Bắc (Cao cấp)' },
+    { id: 'vi-VN-Wavenet-A', name: 'Nữ - Giọng Miền Bắc (Cao cấp)' },
+    { id: 'vi-VN-Wavenet-C', name: 'Nữ - Giọng Miền Nam (Cao cấp)' },
 ];
 
 
-const LOCAL_STORAGE_KEY = 'youtubeProductionAssistantState_v5'; // Tăng phiên bản để tránh lỗi dữ liệu cũ
+const LOCAL_STORAGE_KEY = 'youtubeProductionAssistantState_v5';
 
 const App: React.FC = () => {
     const [currentStep, setCurrentStep] = useState<Step>(Step.Ideation);
@@ -250,8 +250,8 @@ const App: React.FC = () => {
             setError("Không thể sao chép, một số nội dung bị thiếu.");
             return;
         }
-
-        const formattedContent = `...`; // Giữ nguyên nội dung format của bạn
+        // Giữ nguyên nội dung format của bạn
+        const formattedContent = `...`; 
 
         navigator.clipboard.writeText(formattedContent.trim())
             .then(() => { setIsCopied(true); setTimeout(() => setIsCopied(false), 3000); })
@@ -289,7 +289,6 @@ const App: React.FC = () => {
         }
     }, [selectedGoogleVoice]);
 
-    
     const renderContent = () => {
         if (isLoading) {
             return <div className="flex justify-center items-center h-64"><LoadingSpinner text="AI đang suy nghĩ..." /></div>;
@@ -305,7 +304,37 @@ const App: React.FC = () => {
         }
         
         switch (currentStep) {
-            // ... (Giữ nguyên tất cả các case khác: Ideation, IdeaSelection, v.v...)
+            case Step.Ideation:
+                // ... (Giữ nguyên nội dung case này)
+                return <div>...Nội dung cũ...</div>;
+
+            case Step.IdeaSelection:
+                 // ... (Giữ nguyên nội dung case này)
+                return <div>...Nội dung cũ...</div>;
+            
+            case Step.Outlining:
+                 // ... (Giữ nguyên nội dung case này)
+                return <div>...Nội dung cũ...</div>;
+
+            case Step.KeywordAnalysis:
+                 // ... (Giữ nguyên nội dung case này)
+                return <div>...Nội dung cũ...</div>;
+            
+            case Step.Scripting:
+                 // ... (Giữ nguyên nội dung case này)
+                return <div>...Nội dung cũ...</div>;
+            
+            case Step.ScriptReview:
+                 // ... (Giữ nguyên nội dung case này)
+                return <div>...Nội dung cũ...</div>;
+            
+            case Step.MusicGeneration:
+                 // ... (Giữ nguyên nội dung case này)
+                return <div>...Nội dung cũ...</div>;
+
+            case Step.ImageGeneration: 
+                 // ... (Giữ nguyên nội dung case này)
+                return <div>...Nội dung cũ...</div>;
             
             case Step.Voiceover: {
                 return (
@@ -313,7 +342,7 @@ const App: React.FC = () => {
                         <h2 className="text-2xl font-bold text-center mb-4 text-slate-100">Lồng tiếng cho kịch bản</h2>
                         <p className="text-center text-slate-400 mb-8 max-w-3xl mx-auto">Chọn một giọng nói, sau đó tạo âm thanh cho từng cảnh. Bạn có thể tải về các tệp MP3 để sử dụng trong phần mềm dựng phim của mình.</p>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-md mx-auto mb-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-lg mx-auto mb-8">
                             <div>
                                 <label htmlFor="vbee-voice-select" className="block text-sm font-medium text-slate-300 mb-2">Chọn giọng đọc VBee:</label>
                                 <select id="vbee-voice-select" value={selectedVbeeVoice} onChange={(e) => setSelectedVbeeVoice(e.target.value)} className="w-full p-2 bg-slate-800 border border-slate-700 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
@@ -332,6 +361,8 @@ const App: React.FC = () => {
                             {structuredScript.map((scene) => {
                                 const vbeeAudioState = vbeeAudioStates[scene.scene];
                                 const googleAudioState = googleAudioStates[scene.scene];
+                                const vbeeIcon = <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" /><path d="M5.5 8.5a.5.5 0 01.5.5v1a3.5 3.5 0 007 0v-1a.5.5 0 011 0v1a4.5 4.5 0 01-4.5 4.472V16h1a.5.5 0 010 1h-3a.5.5 0 010-1h1v-1.028A4.5 4.5 0 014 10v-1a.5.5 0 01.5-.5z" /></svg>;
+                                
                                 return (
                                 <Card key={scene.scene}>
                                     <h3 className="text-lg font-bold text-sky-400 mb-3">Cảnh {scene.scene}</h3>
@@ -341,11 +372,11 @@ const App: React.FC = () => {
                                         <CopyButton textToCopy={scene.dialogue} buttonText="Sao chép lời thoại" className="w-full sm:w-auto" />
                                         
                                         <button onClick={() => handleGenerateVbeeAudio(scene.scene, scene.dialogue)} disabled={vbeeAudioState?.isLoading} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 rounded-md font-semibold text-sm text-white transition-colors disabled:bg-slate-700 disabled:cursor-wait">
-                                            {vbeeAudioState?.isLoading ? <><LoadingSpinner size="sm" /><span>Đang tạo...</span></> : <> {/* Icon SVG */} <span>VBee</span></>}
+                                            {vbeeAudioState?.isLoading ? <><LoadingSpinner size="sm" /><span>Đang tạo...</span></> : <>{vbeeIcon} <span>VBee</span></>}
                                         </button>
                                         
                                         <button onClick={() => handleGenerateGoogleTtsAudio(scene.scene, scene.dialogue)} disabled={googleAudioState?.isLoading} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 rounded-md font-semibold text-sm text-white transition-colors disabled:bg-slate-700 disabled:cursor-wait">
-                                            {googleAudioState?.isLoading ? <><LoadingSpinner size="sm" /><span>Đang tạo...</span></> : <> {/* Icon SVG */} <span>Google</span></>}
+                                            {googleAudioState?.isLoading ? <><LoadingSpinner size="sm" /><span>Đang tạo...</span></> : <>{vbeeIcon} <span>Google</span></>}
                                         </button>
                                     </div>
 
@@ -377,7 +408,9 @@ const App: React.FC = () => {
                 );
             }
             
-             // ... (Giữ nguyên các case khác: Publishing, v.v...)
+            case Step.Publishing:
+                 // ... (Giữ nguyên nội dung case này)
+                return <div>...Nội dung cũ...</div>;
         }
     };
     

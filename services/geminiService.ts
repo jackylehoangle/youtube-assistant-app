@@ -182,47 +182,47 @@ export const generateScript = async (idea: VideoIdea, analysis: KeywordAnalysisR
 };
 
 export const reviewAndStructureScript = async (script: string): Promise<StructuredScriptScene[]> => {
-  const prompt = `Bạn là một trợ lý sản xuất video và một đạo diễn nghệ thuật. Nhiệm vụ của bạn là phân tích kịch bản thô dưới đây và cấu trúc lại nó thành các cảnh (scenes) riêng biệt để tiện cho việc sản xuất.
+    const prompt = `Bạn là một trợ lý sản xuất video và một đạo diễn nghệ thuật. Nhiệm vụ của bạn là phân tích kịch bản thô dưới đây và cấu trúc lại nó thành các cảnh (scenes) riêng biệt để tiện cho việc sản xuất.
 
-  **Kịch bản thô:**
-  ---
-  ${script}
-  ---
+    **Kịch bản thô:**
+    ---
+    ${script}
+    ---
 
-  **Yêu cầu:**
-  1.  Chia kịch bản thành một chuỗi các cảnh tuần tự. Một cảnh mới thường bắt đầu khi có sự thay đổi về nội dung hoặc có một tiêu đề phần mới.
-  2.  Với mỗi cảnh, hãy trích xuất các thông tin sau:
-      - **dialogue**: Toàn bộ lời thoại sạch, sẵn sàng cho việc chuyển văn bản thành giọng nói. Loại bỏ tất cả các ghi chú sản xuất như [VISUAL: ...] hoặc [SOUND: ...].
-      - **visualSuggestionVI (Tiếng Việt)**: Gộp tất cả các gợi ý về hình ảnh ([VISUAL:...]) trong cảnh đó thành một mô tả tiếng Việt duy nhất, mạch lạc, dễ hiểu cho người dùng. Nếu không có, trả về "Không có gợi ý cụ thể.".
-      - **visualSuggestionEN (Tiếng Anh)**: Dựa trên gợi ý tiếng Việt, tạo một prompt tiếng Anh CỰC KỲ CHI TIẾT VÀ MANG TÍNH NGHỆ THUẬT cho AI tạo ảnh (như Midjourney, Stable Diffusion). Prompt này phải bao gồm:
-          - **Chủ thể và Hành động:** Mô tả rõ nhân vật chính và họ đang làm gì.
-          - **Bối cảnh:** Mô tả chi tiết môi trường xung quanh (trong nhà, ngoài trời, văn phòng, quán cà phê...).
-          - **Ánh sáng:** Gợi ý về ánh sáng (ví dụ: soft natural light, dramatic cinematic lighting, golden hour).
-          - **Góc máy:** Gợi ý về góc máy (ví dụ: close-up shot, wide-angle shot, pov shot).
-          - **Phong cách:** Thêm các từ khóa về phong cách để ảnh đẹp hơn (ví dụ: photorealistic, cinematic, vibrant colors, 8k, professional photography).
-          - **Từ khóa phủ định:** Luôn kết thúc bằng '--no text, writing, logos, signatures, watermarks' để tránh AI tạo ra chữ.
-          Nếu gợi ý gốc là không có, hãy tự sáng tạo một prompt phù hợp với lời thoại của cảnh.
-      - **soundSuggestion**: Gộp tất cả các gợi ý về âm thanh ([SOUND:...]) trong cảnh đó thành một mô tả duy nhất. Nếu không có, trả về "Không có gợi ý cụ thể."
-  3.  Đánh số thứ tự các cảnh bắt đầu từ 1.
+    **Yêu cầu:**
+    1.  Chia kịch bản thành một chuỗi các cảnh tuần tự. Một cảnh mới thường bắt đầu khi có sự thay đổi về nội dung hoặc có một tiêu đề phần mới.
+    2.  Với mỗi cảnh, hãy trích xuất các thông tin sau:
+        - **dialogue**: Toàn bộ lời thoại sạch, sẵn sàng cho việc chuyển văn bản thành giọng nói. Loại bỏ tất cả các ghi chú sản xuất như [VISUAL: ...] hoặc [SOUND: ...].
+        - **visualSuggestionVI (Tiếng Việt)**: Gộp tất cả các gợi ý về hình ảnh ([VISUAL:...]) trong cảnh đó thành một mô tả tiếng Việt duy nhất, mạch lạc, dễ hiểu cho người dùng. Nếu không có, trả về "Không có gợi ý cụ thể.".
+        - **visualSuggestionEN (Tiếng Anh)**: Dựa trên gợi ý tiếng Việt, tạo một prompt tiếng Anh CỰC KỲ CHI TIẾT VÀ MANG TÍNH NGHỆ THUẬT cho AI tạo ảnh (như Midjourney, Stable Diffusion). Prompt này phải bao gồm:
+            - **Chủ thể và Hành động:** Mô tả rõ nhân vật chính và họ đang làm gì.
+            - **Bối cảnh:** Mô tả chi tiết môi trường xung quanh (trong nhà, ngoài trời, văn phòng, quán cà phê...).
+            - **Ánh sáng:** Gợi ý về ánh sáng (ví dụ: soft natural light, dramatic cinematic lighting, golden hour).
+            - **Góc máy:** Gợi ý về góc máy (ví dụ: close-up shot, wide-angle shot, pov shot).
+            - **Phong cách:** Thêm các từ khóa về phong cách để ảnh đẹp hơn (ví dụ: photorealistic, cinematic, vibrant colors, 8k, professional photography).
+            - **Từ khóa phủ định:** Luôn kết thúc bằng '--no text, writing, logos, signatures, watermarks' để tránh AI tạo ra chữ.
+            Nếu gợi ý gốc là không có, hãy tự sáng tạo một prompt phù hợp với lời thoại của cảnh.
+        - **soundSuggestion**: Gộp tất cả các gợi ý về âm thanh ([SOUND:...]) trong cảnh đó thành một mô tả duy nhất. Nếu không có, trả về "Không có gợi ý cụ thể."
+    3.  Đánh số thứ tự các cảnh bắt đầu từ 1.
 
-  QUAN TRỌNG: Toàn bộ nội dung trả về PHẢI bằng tiếng Việt, NGOẠI TRỪ 'visualSuggestionEN' phải bằng tiếng Anh.`;
+    QUAN TRỌNG: Toàn bộ nội dung trả về PHẢI bằng tiếng Việt, NGOẠI TRỪ 'visualSuggestionEN' phải bằng tiếng Anh.`;
 
-  const schema = {
-      type: Type.ARRAY,
-      items: {
-          type: Type.OBJECT,
-          properties: {
-              scene: { type: Type.INTEGER, description: "Số thứ tự của cảnh." },
-              dialogue: { type: Type.STRING, description: "Lời thoại sạch cho cảnh này." },
-              visualSuggestionVI: { type: Type.STRING, description: "Gợi ý hình ảnh bằng tiếng Việt cho người dùng xem." },
-              visualSuggestionEN: { type: Type.STRING, description: "Gợi ý hình ảnh chi tiết bằng tiếng Anh cho AI tạo ảnh." },
-              soundSuggestion: { type: Type.STRING, description: "Tất cả gợi ý âm thanh cho cảnh này." },
-          },
-          required: ["scene", "dialogue", "visualSuggestionVI", "visualSuggestionEN", "soundSuggestion"],
-      },
-  };
+    const schema = {
+        type: Type.ARRAY,
+        items: {
+            type: Type.OBJECT,
+            properties: {
+                scene: { type: Type.INTEGER, description: "Số thứ tự của cảnh." },
+                dialogue: { type: Type.STRING, description: "Lời thoại sạch cho cảnh này." },
+                visualSuggestionVI: { type: Type.STRING, description: "Gợi ý hình ảnh bằng tiếng Việt cho người dùng xem." },
+                visualSuggestionEN: { type: Type.STRING, description: "Gợi ý hình ảnh chi tiết bằng tiếng Anh cho AI tạo ảnh." },
+                soundSuggestion: { type: Type.STRING, description: "Tất cả gợi ý âm thanh cho cảnh này." },
+            },
+            required: ["scene", "dialogue", "visualSuggestionVI", "visualSuggestionEN", "soundSuggestion"],
+        },
+    };
 
-  return callGenerativeModel<StructuredScriptScene[]>(prompt, schema);
+    return callGenerativeModel<StructuredScriptScene[]>(prompt, schema);
 };
 
 export const generateMusicPrompts = async (scenes: StructuredScriptScene[]): Promise<MusicPrompt[]> => {
@@ -352,64 +352,64 @@ export const generatePublishingKit = async (idea: VideoIdea, script: string): Pr
 };
 
 export async function generateVbeeAudio(text: string, voice: string): Promise<string> {
-  try {
-    const response = await fetch('/api/vbee', { 
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ text, voice }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Lỗi từ server:', errorData);
-      throw new Error('Không thể tạo âm thanh.');
-    }
-
-    const result = await response.json();
-    
-    if (result && result.audio_link) {
-      return result.audio_link;
-    } else {
-      throw new Error('Không nhận được link audio từ VBee.');
-    }
-
-  } catch (error) {
-    console.error('Thất bại khi gọi hàm tạo audio:', error);
-    throw error;
-  }
-}
-
-export async function generateGoogleTtsAudio(text: string, voiceName: string): Promise<string> {
-  try {
-    const response = await fetch('/api/google-tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, voiceName }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Google TTS request failed');
-    }
-
-    const result = await response.json();
-
-    if (result && result.audioContent) {
-      const audioBytes = atob(result.audioContent);
-      const byteArray = new Uint8Array(audioBytes.length);
-      for (let i = 0; i < audioBytes.length; i++) {
-        byteArray[i] = audioBytes.charCodeAt(i);
+    try {
+      const response = await fetch('/api/vbee.js', { // Sửa lại đường dẫn API
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text, voice }),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Lỗi từ server:', errorData);
+        throw new Error('Không thể tạo âm thanh VBee.');
       }
-      const blob = new Blob([byteArray], { type: 'audio/mpeg' });
-      return URL.createObjectURL(blob);
-    } else {
-      throw new Error('No audio content received from Google TTS.');
+  
+      const result = await response.json();
+      
+      if (result && result.audio_link) {
+        return result.audio_link;
+      } else {
+        throw new Error('Không nhận được link audio từ VBee.');
+      }
+  
+    } catch (error) {
+      console.error('Thất bại khi gọi hàm tạo audio VBee:', error);
+      throw error;
     }
-
-  } catch (error) {
-    console.error('Failed to generate Google TTS audio:', error);
-    throw error;
-  }
+}
+  
+export async function generateGoogleTtsAudio(text: string, voiceName: string): Promise<string> {
+    try {
+      const response = await fetch('/api/google-tts.js', { // Sửa lại đường dẫn API
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voiceName }),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Google TTS request failed');
+      }
+  
+      const result = await response.json();
+  
+      if (result && result.audioContent) {
+        const audioBytes = atob(result.audioContent);
+        const byteArray = new Uint8Array(audioBytes.length);
+        for (let i = 0; i < audioBytes.length; i++) {
+          byteArray[i] = audioBytes.charCodeAt(i);
+        }
+        const blob = new Blob([byteArray], { type: 'audio/mpeg' });
+        return URL.createObjectURL(blob);
+      } else {
+        throw new Error('No audio content received from Google TTS.');
+      }
+  
+    } catch (error) {
+      console.error('Failed to generate Google TTS audio:', error);
+      throw error;
+    }
 }
