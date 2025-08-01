@@ -58,7 +58,7 @@ export enum Step {
     Publishing = 10,
 }
 
-// Interface cho trạng thái của hình ảnh và âm thanh
+// Interface cho các trạng thái
 export interface ImageState {
     dataUrl?: string;
     isLoading: boolean;
@@ -78,8 +78,7 @@ export interface RunwayJobState {
     error?: string;
 }
 
-
-// Định nghĩa cấu trúc của một dự án được lưu (ĐÃ CẬP NHẬT ĐẦY ĐỦ)
+// Cấu trúc dự án để lưu
 export interface AppState {
     currentStep: Step;
     topic: string;
