@@ -24,8 +24,8 @@ export interface ScriptOutline {
 export interface StructuredScriptScene {
     scene: number;
     dialogue: string;
-    visualSuggestionVI: string; // Vietnamese version for display
-    visualSuggestionEN: string; // English version for image generation
+    visualSuggestionVI: string;
+    visualSuggestionEN: string;
     soundSuggestion: string;
 }
 
@@ -55,20 +55,50 @@ export enum Step {
     MusicGeneration = 7,
     ImageGeneration = 8,
     Voiceover = 9,
-    Publishing = 10, // Re-numbered
+    Publishing = 10,
 }
 
-// File: types.ts (thêm vào cuối file)
+// Interface cho trạng thái của hình ảnh và âm thanh
+export interface ImageState {
+    dataUrl?: string;
+    isLoading: boolean;
+    error?: string;
+}
 
-// Định nghĩa cấu trúc của một dự án được lưu
+export interface AudioState {
+    isLoading: boolean;
+    audioUrl?: string;
+    error?: string;
+}
+
+export interface RunwayJobState {
+    uuid?: string;
+    status: 'idle' | 'polling' | 'succeeded' | 'failed';
+    videoUrl?: string;
+    error?: string;
+}
+
+
+// Định nghĩa cấu trúc của một dự án được lưu (ĐÃ CẬP NHẬT ĐẦY ĐỦ)
 export interface AppState {
-  currentStep: number;
-  videoTopic: string;
-  videoIdeas: VideoIdea[];
-  selectedIdea: VideoIdea | null;
-  scriptOutline: ScriptOutline | null;
-  keywordAnalysis: KeywordAnalysisResult | null;
-  fullScript: string;
-  structuredScript: StructuredScriptScene[];
-  // Thêm bất kỳ dữ liệu nào khác bạn muốn lưu ở đây
+    currentStep: Step;
+    topic: string;
+    platform: string;
+    videoType: string;
+    ideas: VideoIdea[];
+    selectedIdea: VideoIdea | null;
+    scriptOutline: ScriptOutline | null;
+    keywordAnalysis: KeywordAnalysisResult | null;
+    script: string;
+    structuredScript: StructuredScriptScene[];
+    musicPrompts: MusicPrompt[];
+    imageStyle: string;
+    images: Record<string, ImageState>;
+    publishingKit: { metadata: YouTubeMetadata; thumbnailConcepts: ThumbnailConcept[] } | null;
+    thumbnailImageState: ImageState;
+    selectedVbeeVoice: string;
+    vbeeAudioStates: Record<number, AudioState>;
+    selectedGoogleVoice: string;
+    googleAudioStates: Record<number, AudioState>;
+    runwayJobs: Record<string, RunwayJobState>;
 }
